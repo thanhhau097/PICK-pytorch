@@ -82,15 +82,22 @@ class PICKDataset(Dataset):
     def __len__(self):
         return len(self.files_list)
 
+    def get_image(self, basename):
+        for ext in ['.jpg', '.png']:
+            path = self.images_folder.joinpath(basename + ext)
+            if os.path.exists(str(path)):
+                return path
+
     def get_image_file(self, basename):
         """
         Return the complete name (fill the extension) from the basename.
         """
-        if self._image_ext is None:
-            filename = list(self.images_folder.glob(f'**/{basename}.*'))[0]
-            self._image_ext = os.path.splitext(filename)[1]
-
-        return self.images_folder.joinpath(basename + self._image_ext)
+        # if self._image_ext is None:
+        #     filename = list(self.images_folder.glob(f'**/{basename}.*'))[0]
+        #     self._image_ext = os.path.splitext(filename)[1]
+        #
+        # return self.images_folder.joinpath(basename + self._image_ext)
+        return self.get_image(basename)
 
     def get_ann_file(self, basename):
         """
@@ -102,19 +109,29 @@ class PICKDataset(Dataset):
 
         return self.boxes_and_transcripts_folder.joinpath(basename + self._ann_ext)
 
+    def get_filename(self, fullname):
+        if '.' in str(fullname):
+            return str(os.path.splitext(fullname)[0])
+        return str(fullname)
+
     @overrides
     def __getitem__(self, index):
 
         if self.training:
             dataitem: pd.Series = self.files_list.iloc[index]
             # config file path
-            boxes_and_transcripts_file = self.get_ann_file(Path(dataitem['file_name']).stem)
-            image_file = self.get_image_file(Path(dataitem['file_name']).stem)
-            entities_file = self.entities_folder.joinpath(Path(dataitem['file_name']).stem + '.txt')
+            # boxes_and_transcripts_file = self.get_ann_file(Path(dataitem['file_name']).stem)
+            # image_file = self.get_image_file(Path(dataitem['file_name']).stem)
+            # entities_file = self.entities_folder.joinpath(Path(dataitem['file_name']).stem + '.txt')
             # documnets_class = dataitem['document_class']
+            boxes_and_transcripts_file = self.get_ann_file(self.get_filename(Path(dataitem['file_name'])))
+            image_file = self.get_image_file(self.get_filename(Path(dataitem['file_name'])))
+            entities_file = self.entities_folder.joinpath(self.get_filename(Path(dataitem['file_name'])) + '.txt')
         else:
-            boxes_and_transcripts_file = self.get_ann_file(Path(self.files_list[index]).stem)
-            image_file = self.get_image_file(Path(self.files_list[index]).stem)
+            # boxes_and_transcripts_file = self.get_ann_file(Path(self.files_list[index]).stem)
+            # image_file = self.get_image_file(Path(self.files_list[index]).stem)
+            boxes_and_transcripts_file = self.get_ann_file(self.get_filename(Path(self.files_list[index])))
+            image_file = self.get_image_file(Path(self.get_filename(self.files_list[index])))
 
         if not boxes_and_transcripts_file.exists() or not image_file.exists():
             if self.ignore_error and self.training:

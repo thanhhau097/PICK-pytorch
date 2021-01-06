@@ -461,7 +461,19 @@ class Trainer:
         if checkpoint['config']['model_arch'] != self.config['model_arch']:
             self.logger_warning("Warning: Architecture configuration given in config file is different from that of "
                                 "checkpoint. This may yield an exception while state_dict is being loaded.")
-        self.model.load_state_dict(checkpoint['state_dict'])
+        # self.model.load_state_dict(checkpoint['state_dict'])
+        params = dict(self.model.named_parameters())
+        state_dict = checkpoint['state_dict']
+        dict_dest = dict(params)
+
+        for name, param in state_dict.items():
+            try:
+                if dict_dest[name].data.shape == param.data.shape:
+                    dict_dest[name].data.copy_(param.data)
+                else:
+                    print("Can not load pretrained weight for layer ", name)
+            except:
+                print("Exception")
 
         # load optimizer state from checkpoint only when optimizer type is not changed.
         if checkpoint['config']['optimizer']['type'] != self.config['optimizer']['type']:
