@@ -1,23 +1,34 @@
 import json
 import os
+import argparse
 
-TRAIN_LIST_PATH = './data/invoice/train/train_samples_list.csv'
-TRAIN_BOXES_AND_TRANSCRIPTS_FOLDER = './data/invoice/train/boxes_and_transcripts'
-TRAIN_IMAGES_FOLDER = './data/invoice/train/images'
+parser = argparse.ArgumentParser(description='Process data for projects')
+parser.add_argument('--project', default='invoice', type=str)
+args = parser.parse_args()
 
-VAL_BOXES_AND_TRANSCRIPTS_FOLDER = './data/invoice/val/boxes_and_transcripts'
-VAL_LIST_PATH = './data/invoice/val/train_samples_list.csv'
-VAL_IMAGES_FOLDER = './data/invoice/val/images'
+if args.project == 'invoice':
+    FIELDS = ["company_name", "company_address", "company_tel", "company_fax", "bank_name", "branch_name", "account_name",
+            "account_type", "account_number", "amount_excluding_tax", "amount_including_tax", "item_name",
+            "item_quantity", "item_unit", "item_unit_amount", "item_total_amount", "tax", "company_zipcode",
+            "payment_date", "issued_date", "delivery_date", "document_number", "invoice_number", "item_line_number",
+            "company_department_name"]
+elif args.project == 'joil':
+    FIELDS = ["company_fax", "company_name", "company_tel", "delivery_date", "delivery_destination_company_address", "delivery_destination_company_fax",
+            "delivery_destination_company_name", "delivery_destination_company_tel", "invoice_number", "item_name", "item_number", "item_quantity"]
+else:
+    raise ValueError('Currently only support Invoice and Joil dataset')
 
-TEST_BOXES_AND_TRANSCRIPTS_FOLDER = './data/invoice/test/boxes_and_transcripts'
-TEST_LIST_PATH = './data/invoice/test/train_samples_list.csv'
-TEST_IMAGES_FOLDER = './data/invoice/test/images'
+TRAIN_LIST_PATH = './data/{}/train/train_samples_list.csv'.format(args.project)
+TRAIN_BOXES_AND_TRANSCRIPTS_FOLDER = './data/{}/train/boxes_and_transcripts'.format(args.project)
+TRAIN_IMAGES_FOLDER = './data/{}/train/images'.format(args.project)
 
-FIELDS = ["company_name", "company_address", "company_tel", "company_fax", "bank_name", "branch_name", "account_name",
-          "account_type", "account_number", "amount_excluding_tax", "amount_including_tax", "item_name",
-          "item_quantity", "item_unit", "item_unit_amount", "item_total_amount", "tax", "company_zipcode",
-          "payment_date", "issued_date", "delivery_date", "document_number", "invoice_number", "item_line_number",
-          "company_department_name"]
+VAL_BOXES_AND_TRANSCRIPTS_FOLDER = './data/{}/val/boxes_and_transcripts'.format(args.project)
+VAL_LIST_PATH = './data/{}/val/train_samples_list.csv'.format(args.project)
+VAL_IMAGES_FOLDER = './data/{}/val/images'.format(args.project)
+
+TEST_BOXES_AND_TRANSCRIPTS_FOLDER = './data/{}/test/boxes_and_transcripts'.format(args.project)
+TEST_LIST_PATH = './data/{}/test/train_samples_list.csv'.format(args.project)
+TEST_IMAGES_FOLDER = './data/{}/test/images'.format(args.project)
 
 for folder in [TRAIN_BOXES_AND_TRANSCRIPTS_FOLDER, VAL_BOXES_AND_TRANSCRIPTS_FOLDER, TEST_BOXES_AND_TRANSCRIPTS_FOLDER]:
     os.makedirs(folder, exist_ok=True)
@@ -106,6 +117,6 @@ def process(data_folder, box_folder, list_path):
             f.write(str(i + 1) + ',' + 'invoice,' + basename + '\n')
 
 
-process('data/invoice/train', TRAIN_BOXES_AND_TRANSCRIPTS_FOLDER, TRAIN_LIST_PATH)
-process('data/invoice/val', VAL_BOXES_AND_TRANSCRIPTS_FOLDER, VAL_LIST_PATH)
-process('data/invoice/test', TEST_BOXES_AND_TRANSCRIPTS_FOLDER, TEST_LIST_PATH)
+process('data/{}/train'.format(args.project), TRAIN_BOXES_AND_TRANSCRIPTS_FOLDER, TRAIN_LIST_PATH)
+process('data/{}/val'.format(args.project), VAL_BOXES_AND_TRANSCRIPTS_FOLDER, VAL_LIST_PATH)
+process('data/{}/test'.format(args.project), TEST_BOXES_AND_TRANSCRIPTS_FOLDER, TEST_LIST_PATH)
