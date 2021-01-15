@@ -174,7 +174,7 @@ class BatchCollateFn(object):
         self.training = training
 
     def __call__(self, batch_list: List[Document]):
-
+        # print('transcripts:', batch_list[0].transcripts)
         # dynamic calculate max boxes number of batch,
         # this is suitable to one gpus or multi-nodes multi-gpus trianing mode, due to pytorch distributed training strategy.
         max_boxes_num_batch = max([x.boxes_num for x in batch_list])

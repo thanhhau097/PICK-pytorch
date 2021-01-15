@@ -103,7 +103,7 @@ ENV/
 # input data, saved log, checkpoints
 input/
 saved/
-
+data/
 # editor, os cache directory
 .vscode/
 .idea/

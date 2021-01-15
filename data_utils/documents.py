@@ -90,6 +90,9 @@ class Document:
 
         # Limit the number of boxes and number of transcripts to process.
         boxes_num = min(len(boxes), MAX_BOXES_NUM)
+
+        self.transcripts = transcripts[:boxes_num]
+
         transcript_len = min(max([len(t) for t in transcripts[:boxes_num]]), MAX_TRANSCRIPT_LEN)
         mask = np.zeros((boxes_num, transcript_len), dtype=int)
 
