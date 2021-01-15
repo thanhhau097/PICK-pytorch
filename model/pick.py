@@ -95,10 +95,11 @@ class PICKModel(nn.Module):
         iob_tags_label = kwargs['iob_tags_label'] if self.training else None  # (B, N, T)
         mask = kwargs['mask']  # (B, N, T)
         boxes_coordinate = kwargs['boxes_coordinate']  # (B, num_boxes, 8)
+        batch_transcripts = kwargs['batch_transcripts']
 
         ##### Forward Begin #####
         ### Encoder module ###
-        # word embedding
+        # word embedding, not nessessary for bert so I commented
         text_emb = self.word_emb(text_segments)
 
         # src_key_padding_mask is text padding mask, True is padding value (B*N, T)
@@ -107,11 +108,12 @@ class PICKModel(nn.Module):
 
         # set of nodes, (B*N, T, D)
         x = self.encoder(images=whole_image, boxes_coordinate=boxes_coordinate, transcripts=text_emb,
-                         src_key_padding_mask=src_key_padding_mask)
+                         src_key_padding_mask=src_key_padding_mask, batch_transcripts=batch_transcripts)
 
         ### Graph module ###
         # text_mask, True for valid, (including all not valid node), (B*N, T)
         text_mask = torch.logical_not(src_key_padding_mask).byte()
+        print('text_mask: ', text_mask.shape)
         # (B*N, T, D) -> (B*N, D)
         x_gcn = self._aggregate_avg_pooling(x, text_mask)
         # (B*N, 1)，True is valid node

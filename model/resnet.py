@@ -127,7 +127,7 @@ class ResNet(nn.Module):
 
         self.conv2 = nn.Conv2d(512 * block.expansion, output_channels, kernel_size=3, stride=1, padding=1,
                                bias=False)  # add
-        self.bn2 = nn.BatchNorm2d(512)
+        self.bn2 = nn.BatchNorm2d(output_channels)
         self.relu2 = nn.ReLU(inplace=True)
 
         for m in self.modules():

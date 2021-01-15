@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.ops import roi_align
 from torchvision.ops import roi_pool
+from transformers import BertTokenizer, BertModel
 
 from . import resnet
 
@@ -19,15 +20,16 @@ class Encoder(nn.Module):
     def __init__(self,
                  char_embedding_dim: int,
                  out_dim: int,
-                 image_feature_dim: int = 512,
+                 image_feature_dim: int = 768,
                  nheaders: int = 8,
                  nlayers: int = 6,
                  feedforward_dim: int = 2048,
                  dropout: float = 0.1,
-                 max_len: int = 100,
+                 max_len: int = 50,
                  image_encoder: str = 'resnet50',
                  roi_pooling_mode: str = 'roi_align',
-                 roi_pooling_size: Tuple[int, int] = (7, 7)):
+                 roi_pooling_size: Tuple[int, int] = (7, 7),
+                 BERT_model_name: str='bert-base-multilingual-cased',):
         '''
         convert image segments and text segments to node embedding.
         :param char_embedding_dim:
@@ -43,7 +45,7 @@ class Encoder(nn.Module):
         :param roi_pooling_size:
         '''
         super().__init__()
-
+        print('outdim: ', out_dim)
         self.dropout = dropout
         assert roi_pooling_mode in ['roi_align', 'roi_pool'], 'roi pooling model: {} not support.'.format(
             roi_pooling_mode)
@@ -51,12 +53,13 @@ class Encoder(nn.Module):
         assert roi_pooling_size and len(roi_pooling_size) == 2, 'roi_pooling_size not be set properly.'
         self.roi_pooling_size = tuple(roi_pooling_size)  # (h, w)
 
-        transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=char_embedding_dim,
-                                                               nhead=nheaders,
-                                                               dim_feedforward=feedforward_dim,
-                                                               dropout=dropout)
-        self.transformer_encoder = nn.TransformerEncoder(transformer_encoder_layer, num_layers=nlayers)
-
+        # transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=char_embedding_dim,
+        #                                                        nhead=nheaders,
+        #                                                        dim_feedforward=feedforward_dim,
+        #                                                        dropout=dropout)
+        # self.transformer_encoder = nn.TransformerEncoder(transformer_encoder_layer, num_layers=nlayers)
+        self.tokenizer = BertTokenizer.from_pretrained(BERT_model_name)
+        self.bert = BertModel.from_pretrained(BERT_model_name)
         if image_encoder == 'resnet18':
             self.cnn = resnet.resnet18(output_channels=out_dim)
         elif image_encoder == 'resnet34':
@@ -77,19 +80,32 @@ class Encoder(nn.Module):
         self.norm = nn.LayerNorm(out_dim)
 
         # Compute the positional encodings once in log space.
-        position_embedding = torch.zeros(max_len, char_embedding_dim)
-        position = torch.arange(0, max_len).unsqueeze(1).float()
-        div_term = torch.exp(torch.arange(0, char_embedding_dim, 2).float() *
-                             -(math.log(10000.0) / char_embedding_dim))
-        position_embedding[:, 0::2] = torch.sin(position * div_term)
-        position_embedding[:, 1::2] = torch.cos(position * div_term)
-        position_embedding = position_embedding.unsqueeze(0).unsqueeze(0)  # 1, 1, max_len, char_embedding_dim
-        self.register_buffer('position_embedding', position_embedding)
-
+        # position_embedding = torch.zeros(max_len, char_embedding_dim)
+        # position = torch.arange(0, max_len).unsqueeze(1).float()
+        # div_term = torch.exp(torch.arange(0, char_embedding_dim, 2).float() *
+        #                      -(math.log(10000.0) / char_embedding_dim))
+        # position_embedding[:, 0::2] = torch.sin(position * div_term)
+        # position_embedding[:, 1::2] = torch.cos(position * div_term)
+        # position_embedding = position_embedding.unsqueeze(0).unsqueeze(0)  # 1, 1, max_len, char_embedding_dim
+        # self.register_buffer('position_embedding', position_embedding)
+        self.max_len = max_len
         self.pe_droput = nn.Dropout(self.dropout)
 
+    def handle_batch_transcripts(self, device, batch_transcripts:List, max_len: int, max_boxes: int):
+        new_batch_transcripts_encoded = []
+        for transcripts_list in batch_transcripts:
+            new_transcripts_list = [' '.join(transcripts) for transcripts in transcripts_list]
+            new_transcripts_list_encoded = self.tokenizer.batch_encode_plus(new_transcripts_list, padding=True, max_length=max_len, pad_to_max_length=True)['input_ids']
+            # print(len(new_transcripts_list_encoded))
+            if len(new_transcripts_list_encoded) < max_boxes:
+                new_transcripts_list_encoded += [[self.tokenizer.convert_tokens_to_ids('<PAD>')] * max_len] * (max_boxes - len(new_transcripts_list_encoded))
+            # print("len new_transcripts_list_encoded: ", len(new_transcripts_list_encoded))
+            new_batch_transcripts_encoded.append(new_transcripts_list_encoded)
+        return torch.tensor(new_batch_transcripts_encoded, device=device, dtype=torch.long)
+    
+
     def forward(self, images: torch.Tensor, boxes_coordinate: torch.Tensor, transcripts: torch.Tensor,
-                src_key_padding_mask: torch.Tensor):
+                src_key_padding_mask: torch.Tensor, batch_transcripts: List):
         '''
 
         :param images: whole_images, shape is (B, N, H, W, C), where B is batch size, N is the number of segments of
@@ -105,9 +121,16 @@ class Encoder(nn.Module):
         need_weights: output attn_output_weights.
         :return: set of nodes X, shape is (B*N, T, D)
         '''
-
+        print('batch_transcripts: ', batch_transcripts)
+        device = images.device
         B, N, T, D = transcripts.shape
-
+        max_len = T
+        print('transcripts.shape: ', transcripts.shape)
+        # (B, N, T)
+        text_tokenized = self.handle_batch_transcripts(device, batch_transcripts, max_len, N)
+        # (B * N, T)
+        text_tokenized = text_tokenized.reshape(B * N, max_len)
+        print('text_tokenized.shape: ', text_tokenized.shape)
         # get image embedding using cnn
         # (B, 3, H, W)
         _, _, origin_H, origin_W = images.shape
@@ -144,9 +167,15 @@ class Encoder(nn.Module):
         image_segments = image_segments.unsqueeze(dim=1)
 
         # add positional embedding
-        transcripts_segments = self.pe_droput(transcripts + self.position_embedding[:, :, :transcripts.size(2), :])
+        # transcripts_segments = self.pe_droput(transcripts + self.position_embedding[:, :, :transcripts.size(2), :])
         # (B*N, T ,D)
-        transcripts_segments = transcripts_segments.reshape(B * N, T, D)
+        # transcripts_segments = transcripts_segments.reshape(B * N, T, D)
+
+        # get the bert embedding
+        transcripts_segments = self.bert(text_tokenized)
+        transcripts_segments = transcripts_segments[0]
+        print("transcripts_segments.shape: ",transcripts_segments.shape)
+        #
 
         # (B*N, T, D)
         image_segments = image_segments.expand_as(transcripts_segments)
@@ -154,12 +183,13 @@ class Encoder(nn.Module):
         # here we first add image embedding and text embedding together,
         # then as the input of transformer to get a non-local fusion features, different from paper process.
         out = image_segments + transcripts_segments
+        
 
         # (T, B*N, D)
         out = out.transpose(0, 1).contiguous()
 
         # (T, B*N, D)
-        out = self.transformer_encoder(out, src_key_padding_mask=src_key_padding_mask)
+        # out = self.transformer_encoder(out, src_key_padding_mask=src_key_padding_mask)
 
         # (B*N, T, D)
         out = out.transpose(0, 1).contiguous()

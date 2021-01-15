@@ -15,7 +15,7 @@
             },
             "encoder_kwargs":{
                 "char_embedding_dim":-1,
-                "out_dim": 512,
+                "out_dim": 768,
                 "nheaders": 4,
                 "nlayers": 3,
                 "feedforward_dim": 1024,
@@ -57,7 +57,7 @@
     "train_dataset": {
         "type": "PICKDataset",
         "args": {
-            "files_name":"data/joil/train/train_samples_list.csv",
+            "files_name":"/mnt/ai_filestore/home/lionel/PICK-pytorch/data/joil/train/train_samples_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
@@ -69,7 +69,7 @@
     "validation_dataset": {
         "type": "PICKDataset",
         "args": {
-            "files_name":"data/joil/val/train_samples_list.csv",
+            "files_name":"/mnt/ai_filestore/home/lionel/PICK-pytorch/data/joil/val/train_samples_list.csv",
             "boxes_and_transcripts_folder":"boxes_and_transcripts",
             "images_folder":"images",
             "entities_folder":"entities",
@@ -81,7 +81,7 @@
     "train_data_loader": {
         "type": "DataLoader",
         "args":{
-            "batch_size": 4,
+            "batch_size": 2,
             "shuffle": true,
             "drop_last": true,
             "num_workers": 8,
@@ -91,7 +91,7 @@
     "val_data_loader": {
           "type": "DataLoader",
           "args":{
-              "batch_size": 4,
+              "batch_size": 2,
               "shuffle": false,
               "drop_last": false,
               "num_workers": 8,

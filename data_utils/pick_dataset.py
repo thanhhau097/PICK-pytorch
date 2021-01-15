@@ -190,6 +190,7 @@ class BatchCollateFn(object):
         # whole image, B, C, H, W
         image_batch_tensor = torch.stack([self.trsfm(x.whole_image) for x in batch_list], dim=0).float()
 
+        batch_transcripts = [x.transcripts for x in batch_list]
         # relation features, (B, num_boxes, num_boxes, 6)
         relation_features_padded_list = [F.pad(torch.FloatTensor(x.relation_features),
                                                (0, 0, 0, max_boxes_num_batch - x.boxes_num,
@@ -250,7 +251,8 @@ class BatchCollateFn(object):
                          boxes_coordinate=boxes_coordinate_batch_tensor,
                          mask=mask_batch_tensor,
                          iob_tags_label=iob_tags_label_batch_tensor,
-                         filenames=filenames)
+                         filenames=filenames, 
+                         batch_transcripts=batch_transcripts)
         else:
             batch = dict(whole_image=image_batch_tensor,
                          relation_features=relation_features_batch_tensor,
@@ -259,6 +261,7 @@ class BatchCollateFn(object):
                          boxes_coordinate=boxes_coordinate_batch_tensor,
                          mask=mask_batch_tensor,
                          image_indexs=image_indexs_tensor,
-                         filenames=filenames)
+                         filenames=filenames,
+                         batch_transcripts=batch_transcripts)
 
         return batch
