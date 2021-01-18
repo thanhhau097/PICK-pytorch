@@ -29,6 +29,7 @@ class Encoder(nn.Module):
                  image_encoder: str = 'resnet50',
                  roi_pooling_mode: str = 'roi_align',
                  roi_pooling_size: Tuple[int, int] = (7, 7),
+                 tokenizer_model_name: str='cl-tohoku/bert-base-japanese-char',
                  BERT_model_name: str='prajjwal1/bert-tiny',):
         '''
         convert image segments and text segments to node embedding.
@@ -58,8 +59,12 @@ class Encoder(nn.Module):
         #                                                        dim_feedforward=feedforward_dim,
         #                                                        dropout=dropout)
         # self.transformer_encoder = nn.TransformerEncoder(transformer_encoder_layer, num_layers=nlayers)
-        self.tokenizer = BertTokenizer.from_pretrained(BERT_model_name)
+        self.tokenizer = BertTokenizer.from_pretrained(tokenizer_model_name)
         self.bert = BertModel.from_pretrained(BERT_model_name)
+
+        self.bert.resize_token_embeddings(len(tokenizer))
+
+        
         if image_encoder == 'resnet18':
             self.cnn = resnet.resnet18(output_channels=out_dim)
         elif image_encoder == 'resnet34':
