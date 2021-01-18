@@ -20,7 +20,7 @@ class Encoder(nn.Module):
     def __init__(self,
                  char_embedding_dim: int,
                  out_dim: int,
-                 image_feature_dim: int = 768,
+                 image_feature_dim: int = 128,
                  nheaders: int = 8,
                  nlayers: int = 6,
                  feedforward_dim: int = 2048,
@@ -29,7 +29,7 @@ class Encoder(nn.Module):
                  image_encoder: str = 'resnet50',
                  roi_pooling_mode: str = 'roi_align',
                  roi_pooling_size: Tuple[int, int] = (7, 7),
-                 BERT_model_name: str='bert-base-multilingual-cased',):
+                 BERT_model_name: str='prajjwal1/bert-tiny',):
         '''
         convert image segments and text segments to node embedding.
         :param char_embedding_dim:
@@ -45,7 +45,7 @@ class Encoder(nn.Module):
         :param roi_pooling_size:
         '''
         super().__init__()
-        print('outdim: ', out_dim)
+        # print('outdim: ', out_dim)
         self.dropout = dropout
         assert roi_pooling_mode in ['roi_align', 'roi_pool'], 'roi pooling model: {} not support.'.format(
             roi_pooling_mode)
@@ -121,16 +121,16 @@ class Encoder(nn.Module):
         need_weights: output attn_output_weights.
         :return: set of nodes X, shape is (B*N, T, D)
         '''
-        print('batch_transcripts: ', batch_transcripts)
+        # print('batch_transcripts: ', batch_transcripts)
         device = images.device
         B, N, T, D = transcripts.shape
         max_len = T
-        print('transcripts.shape: ', transcripts.shape)
+        # print('transcripts.shape: ', transcripts.shape)
         # (B, N, T)
         text_tokenized = self.handle_batch_transcripts(device, batch_transcripts, max_len, N)
         # (B * N, T)
         text_tokenized = text_tokenized.reshape(B * N, max_len)
-        print('text_tokenized.shape: ', text_tokenized.shape)
+        # print('text_tokenized.shape: ', text_tokenized.shape)
         # get image embedding using cnn
         # (B, 3, H, W)
         _, _, origin_H, origin_W = images.shape
@@ -174,7 +174,7 @@ class Encoder(nn.Module):
         # get the bert embedding
         transcripts_segments = self.bert(text_tokenized)
         transcripts_segments = transcripts_segments[0]
-        print("transcripts_segments.shape: ",transcripts_segments.shape)
+        # print("transcripts_segments.shape: ",transcripts_segments.shape)
         #
 
         # (B*N, T, D)

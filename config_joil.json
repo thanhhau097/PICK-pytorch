@@ -15,7 +15,7 @@
             },
             "encoder_kwargs":{
                 "char_embedding_dim":-1,
-                "out_dim": 768,
+                "out_dim": 128,
                 "nheaders": 4,
                 "nlayers": 3,
                 "feedforward_dim": 1024,

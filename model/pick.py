@@ -113,7 +113,7 @@ class PICKModel(nn.Module):
         ### Graph module ###
         # text_mask, True for valid, (including all not valid node), (B*N, T)
         text_mask = torch.logical_not(src_key_padding_mask).byte()
-        print('text_mask: ', text_mask.shape)
+        # print('text_mask: ', text_mask.shape)
         # (B*N, T, D) -> (B*N, D)
         x_gcn = self._aggregate_avg_pooling(x, text_mask)
         # (B*N, 1)，True is valid node
