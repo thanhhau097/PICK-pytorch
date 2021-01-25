@@ -62,7 +62,7 @@ class Encoder(nn.Module):
         self.tokenizer = BertTokenizer.from_pretrained(tokenizer_model_name)
         self.bert = BertModel.from_pretrained(BERT_model_name)
 
-        self.bert.resize_token_embeddings(len(tokenizer))
+        self.bert.resize_token_embeddings(len(self.tokenizer))
 
         
         if image_encoder == 'resnet18':
@@ -107,7 +107,6 @@ class Encoder(nn.Module):
             # print("len new_transcripts_list_encoded: ", len(new_transcripts_list_encoded))
             new_batch_transcripts_encoded.append(new_transcripts_list_encoded)
         return torch.tensor(new_batch_transcripts_encoded, device=device, dtype=torch.long)
-    
 
     def forward(self, images: torch.Tensor, boxes_coordinate: torch.Tensor, transcripts: torch.Tensor,
                 src_key_padding_mask: torch.Tensor, batch_transcripts: List):
@@ -146,6 +145,7 @@ class Encoder(nn.Module):
 
         # generate rois for roi pooling, rois shape is (B, N, 5), 5 means (batch_index, x0, y0, x1, y1)
         rois_batch = torch.zeros(B, N, 5, device=images.device)
+        layoutlm_pos_batch = torch.zeros(B, N, 4, device=images.device)
         # Loop on the every image.
         for i in range(B):  # (B, N, 8)
             # (N, 8)
@@ -154,6 +154,17 @@ class Encoder(nn.Module):
             pos = torch.stack([doc_boxes[:, 0], doc_boxes[:, 1], doc_boxes[:, 4], doc_boxes[:, 5]], dim=1)
             rois_batch[i, :, 1:5] = pos
             rois_batch[i, :, 0] = i
+
+            # TODO: convert to layoutlm input
+            layoutlm_pos = torch.stack([
+                1000 * doc_boxes[:, 0] / H,
+                1000 * doc_boxes[:, 1] / W,
+                1000 * doc_boxes[:, 4] / H, 
+                1000 * doc_boxes[:, 5] / W
+                ], dim=1).long()
+            layoutlm_pos_batch[i] = layoutlm_pos
+
+        print("layoutlm_pos_batch.shape =", layoutlm_pos_batch.shape)
 
         spatial_scale = float(H / origin_H)
         # use roi pooling get image segments
