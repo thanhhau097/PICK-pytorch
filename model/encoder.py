@@ -109,7 +109,7 @@ class Encoder(nn.Module):
         return torch.tensor(new_batch_transcripts_encoded, device=device, dtype=torch.long)
 
     def forward(self, images: torch.Tensor, boxes_coordinate: torch.Tensor, transcripts: torch.Tensor,
-                src_key_padding_mask: torch.Tensor, batch_transcripts: List):
+                src_key_padding_mask: torch.Tensor, batch_transcripts: List, image_size):
         '''
 
         :param images: whole_images, shape is (B, N, H, W, C), where B is batch size, N is the number of segments of
@@ -157,14 +157,15 @@ class Encoder(nn.Module):
 
             # TODO: convert to layoutlm input
             layoutlm_pos = torch.stack([
-                1000 * doc_boxes[:, 0] / H,
-                1000 * doc_boxes[:, 1] / W,
-                1000 * doc_boxes[:, 4] / H, 
-                1000 * doc_boxes[:, 5] / W
+                1000 * doc_boxes[:, 0] / image_size[0],
+                1000 * doc_boxes[:, 1] / image_size[1],
+                1000 * doc_boxes[:, 4] / image_size[0], 
+                1000 * doc_boxes[:, 5] / image_size[1]
                 ], dim=1).long()
             layoutlm_pos_batch[i] = layoutlm_pos
 
-        print("layoutlm_pos_batch.shape =", layoutlm_pos_batch.shape)
+        # import pdb; pdb.set_trace()
+        # print("layoutlm_pos_batch.shape =", layoutlm_pos_batch)
 
         spatial_scale = float(H / origin_H)
         # use roi pooling get image segments

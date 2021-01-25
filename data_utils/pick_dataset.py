@@ -252,7 +252,8 @@ class BatchCollateFn(object):
                          mask=mask_batch_tensor,
                          iob_tags_label=iob_tags_label_batch_tensor,
                          filenames=filenames, 
-                         batch_transcripts=batch_transcripts)
+                         batch_transcripts=batch_transcripts,
+                         image_size=batch_list[0].resized_image_size)
         else:
             batch = dict(whole_image=image_batch_tensor,
                          relation_features=relation_features_batch_tensor,
@@ -262,6 +263,7 @@ class BatchCollateFn(object):
                          mask=mask_batch_tensor,
                          image_indexs=image_indexs_tensor,
                          filenames=filenames,
-                         batch_transcripts=batch_transcripts)
+                         batch_transcripts=batch_transcripts,
+                         image_size=batch_list[0].resized_image_size)
 
         return batch

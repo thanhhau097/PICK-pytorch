@@ -108,7 +108,8 @@ class PICKModel(nn.Module):
 
         # set of nodes, (B*N, T, D)
         x = self.encoder(images=whole_image, boxes_coordinate=boxes_coordinate, transcripts=text_emb,
-                         src_key_padding_mask=src_key_padding_mask, batch_transcripts=batch_transcripts)
+                         src_key_padding_mask=src_key_padding_mask, batch_transcripts=batch_transcripts,
+                         image_size=kwargs['image_size'])
 
         ### Graph module ###
         # text_mask, True for valid, (including all not valid node), (B*N, T)
